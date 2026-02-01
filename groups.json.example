@@ -1,0 +1,39 @@
+{
+  "groups": {
+    "-1001234567890": {
+      "name": "My Apartment Block",
+      "spreadsheet_id": "YOUR_SPREADSHEET_ID_HERE",
+      "topic_id": 154,
+      "admin_user_ids": [
+        123456789,
+        987654321
+      ],
+      "houses_file": "houses.json",
+      "user_houses": {
+        "123456789": "101",
+        "987654321": "202"
+      }
+    }
+  },
+  "_instructions": {
+    "how_to_add_groups": "To add more groups, copy the group structure above and add it here with a different chat_id",
+    "how_to_get_chat_id": "Add the bot to your group, send any message, then check the bot logs for 'Chat ID: -100XXXXXXXXX'",
+    "how_to_get_user_id": "Send /start to @userinfobot on Telegram or use /myid command with the bot",
+    "houses_file": "Each group can have its own houses.json file with house numbers and names",
+    "spreadsheet_id": "Get this from the Google Sheets URL: https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit",
+    "topic_id": "Optional: If using forum topics, specify the topic ID. Otherwise, omit this field.",
+    "user_houses": "Map of user_id -> house_number for regular users (non-admins)",
+    "example_second_group": {
+      "-1003206459058": {
+        "name": "Second Group Example",
+        "spreadsheet_id": "ANOTHER_SPREADSHEET_ID",
+        "topic_id": 35,
+        "admin_user_ids": [
+          123456789,
+          222222222
+        ],
+        "houses_file": "houses_group2.json"
+      }
+    }
+  }
+}

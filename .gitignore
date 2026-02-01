@@ -1,0 +1,60 @@
+# ========== CREDENTIALS AND SECRETS ==========
+# Google Sheets credentials
+credentials.json
+service-account-*.json
+
+# Telegram bot token
+token.txt
+
+# Telethon session files
+*.session
+*.session-journal
+
+# Environment variables (NEVER commit these!)
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Configuration files with sensitive data
+groups.json
+houses.json
+
+# Any file ending in .secret or .key
+*.secret
+*.key
+*.pem
+*.p12
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Data files
+processed_messages.json
+last_run.json
+receipts/
+attached_assets/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak

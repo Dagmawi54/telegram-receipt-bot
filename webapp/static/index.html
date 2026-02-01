@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Payment Manager</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+
+<body>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen"
+        style="display: flex; height: 100vh; align-items: center; justify-content: center; flex-direction: column;">
+        <div
+            style="width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;">
+        </div>
+        <p style="margin-top: 16px; color: #94a3b8; font-size: 14px;">Loading App...</p>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" style="display: none;">
+
+        <!-- Welcome / Role Selection -->
+        <div id="welcome-screen" class="container view-animate">
+            <!-- Language Toggle -->
+            <div style="text-align: right; margin-bottom: 8px;">
+                <button id="lang-toggle" onclick="toggleLanguage()"
+                    style="background: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-secondary); padding: 8px 16px; border-radius: 20px; font-size: 13px; cursor: pointer;">
+                    English
+                </button>
+            </div>
+
+            <div style="text-align: center; margin: 20px 0 40px;">
+                <h1 style="font-size: 28px; margin-bottom: 8px;"><span data-i18n="hello">ሰላም</span>, <span
+                        id="welcome-name">User</span></h1>
+                <p class="text-muted" data-i18n="selectWorkspace">ለመቀጠል ስራ ቦታ ይምረጡ</p>
+            </div>
+
+            <div class="role-grid" id="role-buttons">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+
+        <!-- Admin Panel -->
+        <div id="admin-panel" style="display: none;">
+            <header class="app-header">
+                <div class="header-content">
+                    <h2 id="admin-group-name">Block 22</h2>
+                    <p>Admin Dashboard</p>
+                </div>
+                <button class="icon-btn" onclick="showWelcome()">
+                    <i data-feather="log-out"></i>
+                </button>
+            </header>
+
+            <div class="container" style="padding-bottom: 80px;">
+
+                <!-- Dashboard Tab -->
+                <div id="tab-dashboard" class="tab-content view-animate">
+
+                    <!-- Hero Stats -->
+                    <div class="stat-card featured" style="margin-bottom: 24px;">
+                        <span class="stat-label" data-i18n="totalCollected">ጠቅላላ ተሰብስቧል</span>
+                        <div class="stat-value large" id="stat-total">0 ETB</div>
+                        <div style="margin-top: 12px; display: flex; gap: 8px;">
+                            <span class="status-badge status-paid">
+                                <i data-feather="trending-up" style="width: 12px; height: 12px;"></i> +12%
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="widget-grid">
+                        <div class="stat-card">
+                            <i data-feather="home" style="color: #60a5fa; margin-bottom: 12px;"></i>
+                            <span class="stat-label" data-i18n="housesPaid">የከፈሉ ቤቶች</span>
+                            <div class="stat-value" id="stat-houses">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <i data-feather="calendar" style="color: #c084fc; margin-bottom: 12px;"></i>
+                            <span class="stat-label" data-i18n="thisMonth">በዚህ ወር</span>
+                            <div class="stat-value" id="stat-month">0</div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin: 24px 0 16px;" data-i18n="breakdown">ዝርዝር</h3>
+                    <div class="list-group" id="type-breakdown">
+                        <!-- Filled by JS -->
+                    </div>
+
+                    <h3 style="margin: 32px 0 16px;" data-i18n="monthlyTrends">ወርሃዊ አዝማሚያ</h3>
+                    <div class="list-group" id="monthly-breakdown">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+
+                <!-- Houses Tab -->
+                <div id="tab-houses" class="tab-content view-animate" style="display: none;">
+                    <div class="search-bar">
+                        <i data-feather="search" style="color: #94a3b8;"></i>
+                        <input type="text" id="house-search" placeholder="Search house number...">
+                    </div>
+                    <div class="list-group" id="houses-list">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+
+                <!-- Search/Tools Tab -->
+                <div id="tab-search" class="tab-content view-animate" style="display: none;">
+                    <h2 style="margin-bottom: 16px;">Tools</h2>
+                    <div class="search-bar">
+                        <i data-feather="search"></i>
+                        <input type="text" id="search-input" placeholder="Quick find house...">
+                    </div>
+                    <button class="role-card" onclick="searchHouse()"
+                        style="width: 100%; justify-content: center; padding: 16px;">
+                        <span style="font-weight: 600;">Search Database</span>
+                    </button>
+                    <div id="search-results" style="margin-top: 24px;"></div>
+                </div>
+
+            </div>
+
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+                <button class="nav-item active" onclick="switchTab('dashboard')">
+                    <i data-feather="pie-chart"></i>
+                    <span data-i18n="overview">አጠቃላይ</span>
+                </button>
+                <button class="nav-item" onclick="switchTab('houses')">
+                    <i data-feather="home"></i>
+                    <span data-i18n="houses">ቤቶች</span>
+                </button>
+                <button class="nav-item" onclick="switchTab('search')">
+                    <i data-feather="search"></i>
+                    <span data-i18n="find">ፈልግ</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- User Panel (Resident View) -->
+        <div id="user-panel" style="display: none;">
+            <header class="app-header">
+                <div>
+                    <h2 id="user-house-number">House ---</h2>
+                    <p style="color: var(--success);" data-i18n="residentView">● የነዋሪ እይታ</p>
+                </div>
+                <button class="icon-btn" onclick="showWelcome()">
+                    <i data-feather="log-out"></i>
+                </button>
+            </header>
+
+            <div class="container">
+                <div class="stat-card featured" style="margin-bottom: 16px;">
+                    <span class="stat-label" data-i18n="lifetimePaid">ጠቅላላ የተከፈለ</span>
+                    <div class="stat-value large" id="user-total">0 ETB</div>
+                </div>
+
+                <!-- Submit Payment Button -->
+                <button class="role-card"
+                    style="width: 100%; justify-content: center; margin-bottom: 16px; background: linear-gradient(135deg, var(--primary), #2563eb);"
+                    onclick="showPaymentView()">
+                    <i data-feather="plus-circle" style="width: 20px; color: white;"></i>
+                    <span style="font-weight: 600; color: white;" data-i18n="submitNewPayment">አዲስ ክፍያ አስገባ</span>
+                </button>
+                
+                <!-- Edit Last Payment Button -->
+                <button class="role-card" id="btn-edit-last"
+                    style="width: 100%; justify-content: center; margin-bottom: 24px; background: var(--bg-surface); border: 1px solid var(--border-medium); display: none;"
+                    onclick="editLastPayment()">
+                    <i data-feather="edit-2" style="width: 20px; color: var(--warning);"></i>
+                    <span style="font-weight: 600; color: var(--text-primary);">Edit Last Payment</span>
+                </button>
+
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="card-title">
+                        <i data-feather="calendar" style="width: 18px;"></i> <span data-i18n="monthlyStatus">ወርሃዊ
+                            ሁኔታ</span>
+                    </div>
+
+                    <!-- Payment Type Filter Tabs -->
+                    <div id="user-type-tabs"
+                        style="display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px;">
+                        <button class="type-tab active" data-type="all" onclick="filterUserMonths('all')">All</button>
+                        <!-- Other tabs added by JS -->
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;" id="user-months">
+                        <!-- Grid filled by JS -->
+                    </div>
+                </div>
+
+                <h3 style="margin-bottom: 16px;" data-i18n="paymentHistory">የክፍያ ታሪክ</h3>
+                <div class="list-group" id="user-payments">
+                    <!-- List filled by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Detail Views (Modals) -->
+        <div id="detail-view"
+            style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-body); z-index: 200; overflow-y: auto;">
+            <header class="app-header">
+                <button class="icon-btn" onclick="hideDetailView()">
+                    <i data-feather="arrow-left"></i>
+                </button>
+                <div class="header-content">
+                    <h2 id="detail-title">Title</h2>
+                </div>
+                <div style="width: 40px;"></div>
+            </header>
+
+            <div class="container">
+                <div class="stat-card" style="margin-bottom: 24px;">
+                    <span class="stat-label">Total Amount</span>
+                    <div class="stat-value" id="detail-total">0 ETB</div>
+                </div>
+
+                <h3 style="margin-bottom: 16px;">Records</h3>
+                <div class="list-group" id="detail-list">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Submission View -->
+        <div id="payment-view"
+            style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-body); z-index: 200; overflow-y: auto;">
+
+            <!-- Step 1: Upload Receipt -->
+            <div id="payment-step-1">
+                <header class="app-header">
+                    <button class="icon-btn" onclick="hidePaymentView()">
+                        <i data-feather="x"></i>
+                    </button>
+                    <div class="header-content">
+                        <h2 data-i18n="submitPayment">ክፍያ አስገባ</h2>
+                        <p data-i18n="step1Upload">ደረጃ 1: ደረሰኝ ስቀል</p>
+                    </div>
+                    <div style="width: 40px;"></div>
+                </header>
+
+                <div class="container" style="text-align: center; padding-top: 40px;">
+                    <div id="receipt-preview" style="display: none; margin-bottom: 24px;">
+                        <img id="receipt-image" src="" alt="Receipt"
+                            style="max-width: 100%; max-height: 300px; border-radius: 12px; border: 2px solid var(--border-subtle);">
+                    </div>
+
+                    <div id="upload-area" class="upload-area"
+                        onclick="document.getElementById('receipt-input').click()"
+                        ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                        <i data-feather="camera"
+                            style="width: 48px; height: 48px; color: var(--primary); margin-bottom: 16px;"></i>
+                        <h3 style="margin-bottom: 8px;" data-i18n="uploadReceipt">ደረሰኝ ስቀል</h3>
+                        <p class="text-muted" data-i18n="tapToUpload">ፎቶ ለማንሳት ወይም ከጋለሪ ለመምረጥ ይንኩ</p>
+                        <p class="text-muted text-sm" style="margin-top: 8px; font-size: 12px;">or drag and drop</p>
+                    </div>
+
+                    <input type="file" id="receipt-input" accept="image/*" capture="environment" style="display: none;"
+                        onchange="handleReceiptUpload(event)">
+
+                    <button id="btn-continue-step1" class="role-card"
+                        style="width: 100%; justify-content: center; opacity: 0.5; pointer-events: none; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border: none;"
+                        onclick="processReceipt()">
+                        <span style="font-weight: 600;" data-i18n="continue">ቀጥል →</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: Analyzing -->
+            <div id="payment-step-loading" style="display: none;">
+                <div
+                    style="display: flex; height: 80vh; align-items: center; justify-content: center; flex-direction: column;">
+                    <div
+                        style="width: 48px; height: 48px; border: 3px solid var(--border-subtle); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;">
+                    </div>
+                    <p style="margin-top: 20px; color: var(--text-secondary);" data-i18n="analyzingReceipt">ደረሰኝ በመተንተን
+                        ላይ...</p>
+                </div>
+            </div>
+
+            <!-- Step 3: Fill Form -->
+            <div id="payment-step-2" style="display: none;">
+                <header class="app-header">
+                    <button class="icon-btn" onclick="goToPaymentStep(1)">
+                        <i data-feather="arrow-left"></i>
+                    </button>
+                    <div class="header-content">
+                        <h2 data-i18n="paymentDetails">የክፍያ ዝርዝር</h2>
+                        <p data-i18n="step2Confirm">ደረጃ 2: መረጃውን አረጋግጥ</p>
+                    </div>
+                    <div style="width: 40px;"></div>
+                </header>
+
+                <div class="container">
+                    <!-- Extracted Data Display -->
+                    <div class="stat-card" style="margin-bottom: 24px;">
+                        <span class="stat-label" data-i18n="amountDetected">የተገኙ መጠን</span>
+                        <div class="stat-value" id="extracted-amount">0 ETB</div>
+                        <div class="text-sm" id="extracted-txid" style="margin-top: 8px; color: var(--text-secondary);">TXN: ---</div>
+                        <div id="extracted-beneficiary" style="margin-top: 8px;"></div>
+                    </div>
+                    
+                    <!-- Edit Mode Indicator -->
+                    <div id="edit-mode-indicator" style="display: none; background: var(--warning-soft); color: var(--warning); padding: 12px; border-radius: var(--radius-md); margin-bottom: 16px; border-left: 4px solid var(--warning);">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i data-feather="edit-2" style="width: 16px; height: 16px;"></i>
+                            <span style="font-weight: 600;">Edit Mode: Editing your last submission</span>
+                        </div>
+                    </div>
+
+                    <!-- Form Fields -->
+                    <div class="card" style="margin-bottom: 16px;">
+                        <label class="text-sm text-muted" style="display: block; margin-bottom: 8px;"><span
+                                data-i18n="houseNumber">የቤት ቁጥር</span>
+                            *</label>
+                        <div class="search-bar" style="margin-bottom: 8px;">
+                            <i data-feather="home"></i>
+                            <input type="text" id="input-house" class="form-input" placeholder="e.g. 407" maxlength="4"
+                                oninput="lookupHouse()" pattern="[0-9]{3,4}">
+                        </div>
+                        <div id="house-name-display" class="text-sm" style="color: var(--success); display: none;">
+                            <i data-feather="check-circle" style="width: 14px; height: 14px;"></i>
+                            <span id="house-name-text"></span>
+                        </div>
+                        <div id="house-error" class="text-sm" style="color: var(--danger); display: none;"></div>
+                    </div>
+
+                    <div class="card" style="margin-bottom: 16px;">
+                        <label class="text-sm text-muted" style="display: block; margin-bottom: 8px;"><span
+                                data-i18n="paymentType">የክፍያ ዓይነት</span>
+                            *</label>
+                        <select id="input-type" class="form-select">
+                            <option value="">Select type...</option>
+                        </select>
+                    </div>
+
+                    <div class="card" style="margin-bottom: 16px;">
+                        <label class="text-sm text-muted" style="display: block; margin-bottom: 8px;"><span
+                                data-i18n="month">ወር</span> *</label>
+                        <select id="input-month" class="form-select">
+                            <option value="">Select month...</option>
+                        </select>
+                    </div>
+
+                    <div id="form-errors"
+                        style="display: none; background: var(--danger-soft); color: var(--danger); padding: 16px; border-radius: var(--radius-md); margin-bottom: 16px; border-left: 4px solid var(--danger); animation: fadeInUp var(--transition-base);">
+                    </div>
+                    
+                    <div id="form-success"
+                        style="display: none; background: var(--success-soft); color: var(--success); padding: 16px; border-radius: var(--radius-md); margin-bottom: 16px; border-left: 4px solid var(--success); animation: fadeInUp var(--transition-base);">
+                    </div>
+
+                    <button class="role-card" id="btn-submit-payment" style="width: 100%; justify-content: center; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border: none; box-shadow: 0 4px 12px var(--primary-glow);"
+                        onclick="submitPayment()">
+                        <i data-feather="check" style="width: 20px; color: white;"></i>
+                        <span style="font-weight: 600; color: white;" data-i18n="submit">አስገባ</span>
+                    </button>
+                    
+                    <div id="submit-progress" class="progress-bar" style="display: none; margin-top: 16px;">
+                        <div class="progress-fill" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Success -->
+            <div id="payment-step-success" style="display: none;">
+                <div
+                    style="display: flex; height: 80vh; align-items: center; justify-content: center; flex-direction: column; text-align: center; padding: 24px;">
+                    <div
+                        style="width: 80px; height: 80px; border-radius: 50%; background: rgba(16,185,129,0.15); display: flex; align-items: center; justify-content: center; margin-bottom: 24px;">
+                        <i data-feather="check" style="width: 40px; height: 40px; color: var(--success);"></i>
+                    </div>
+                    <h2 style="margin-bottom: 8px;" data-i18n="paymentRecorded">ክፍያ ተመዝግቧል!</h2>
+                    <p class="text-muted" id="success-message" data-i18n="paymentSaved">ክፍያዎ ተቀምጧል።</p>
+                    <button class="role-card" style="margin-top: 32px; justify-content: center;"
+                        onclick="hidePaymentView()">
+                        <span style="font-weight: 600;" data-i18n="done">ተጠናቅቋል</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" style="position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); z-index: 1000; pointer-events: none;"></div>
+    
+    <script src="js/app.js"></script>
+</body>
+
+</html>

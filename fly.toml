@@ -1,0 +1,13 @@
+app = "payment-bot"
+primary_region = "iad"
+
+[build]
+
+[env]
+
+[processes]
+  app = "python better1.py"
+
+[[services]]
+  processes = ["app"]
+  internal_port = 0

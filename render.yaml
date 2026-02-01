@@ -1,0 +1,36 @@
+services:
+  # Web App Service
+  - type: web
+    name: payment-webapp
+    env: python
+    buildCommand: cd webapp && pip install -r requirements.txt
+    startCommand: cd webapp && gunicorn api:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: GOOGLE_CREDENTIALS_JSON
+        sync: false
+      - key: OCR_API_KEY
+        sync: false
+      - key: PORT
+        value: 5000
+
+  # Bot Worker
+  - type: worker
+    name: payment-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python better1.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: SPREADSHEET_ID
+        sync: false
+      - key: TOPIC_ID
+        sync: false
+      - key: ADMIN_USER_IDS
+        sync: false
+      - key: DEFAULT_CHAT_ID
+        sync: false
+      - key: OCR_API_KEY
+        sync: false
