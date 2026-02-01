@@ -4907,6 +4907,238 @@ async def post_init(application):
     await auto_scan_missed_messages()
 
 
+
+# ========== USER REGISTRATION APPROVAL SYSTEM ==========
+
+PENDING_REGISTRATIONS_FILE = "pending_registrations.json"
+
+def load_pending_registrations():
+    """Load pending registration requests"""
+    try:
+        if os.path.exists(PENDING_REGISTRATIONS_FILE):
+            with open(PENDING_REGISTRATIONS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {'requests': []}
+    except Exception as e:
+        logger.error(f"Error loading pending registrations: {e}")
+        return {'requests': []}
+
+def save_pending_registrations_file(data):
+    """Save pending registration requests"""
+    try:
+        with open(PENDING_REGISTRATIONS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving pending registrations: {e}")
+        return False
+
+def add_user_to_groups_json(user_id, house_number, group_id):
+    """Add approved user to groups.json"""
+    try:
+        # Read current groups.json
+        groups_file = 'groups.json'
+        with open(groups_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        # Add user to group's user_houses
+        group_key = str(group_id)
+        if group_key in data.get('groups', {}):
+            if 'user_houses' not in data['groups'][group_key]:
+                data['groups'][group_key]['user_houses'] = {}
+            
+            data['groups'][group_key]['user_houses'][str(user_id)] = str(house_number)
+            
+            # Save updated file
+            with open(groups_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            
+            # Reload group configs
+            global GROUP_CONFIGS
+            GROUP_CONFIGS = load_group_configs()
+            
+            logger.info(f"✅ Added user {user_id} to house {house_number} in group {group_id}")
+            return True
+        else:
+            logger.error(f"Group {group_id} not found in groups.json")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error adding user to groups.json: {e}")
+        return False
+
+async def check_pending_registrations(context):
+    """Periodic task to check for pending registration requests and notify admins"""
+    try:
+        pending = load_pending_registrations()
+        
+        for request in pending.get('requests', []):
+            if request.get('status') == 'pending' and not request.get('notified'):
+                # Send notification to admins
+                await notify_admins_of_registration(context.bot, request)
+                
+                # Mark as notified
+                request['notified'] = True
+                save_pending_registrations_file(pending)
+                
+    except Exception as e:
+        logger.error(f"Error checking pending registrations: {e}")
+
+async def notify_admins_of_registration(bot, request):
+    """Send DM to admins about new registration request"""
+    try:
+        group_id = request['group_id']
+        user_id = request['user_id']
+        user_first_name = request.get('user_first_name', 'User')
+        user_username = request.get('user_username', '')
+        resident_name = request['resident_name']
+        house_number = request['house_number']
+        request_id = request['request_id']
+        
+        # Get admin IDs for this group
+        group_config = GROUP_CONFIGS.get(group_id)
+        if not group_config:
+            return
+        
+        admin_ids = group_config.get('admin_user_ids', [])
+        
+        # Create message
+        username_text = f" (@{user_username})" if user_username else ""
+        message = (
+            f"🆕 **New Registration Request**\\n\\n"
+            f"👤 **User:** {user_first_name}{username_text}\\n"
+            f"🆔 **User ID:** `{user_id}`\\n"
+            f"📝 **Name:** {resident_name}\\n"
+            f"🏠 **House:** {house_number}\\n\\n"
+            f"Approve this user to register house {house_number}?"
+        )
+        
+        # Create inline keyboard with Approve/Reject buttons
+        from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+        
+        keyboard = [
+            [
+                InlineKeyboardButton("✅ Approve", callback_data=f"reg_approve:{request_id}"),
+                InlineKeyboardButton("❌ Reject", callback_data=f"reg_reject:{request_id}")
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        # Send to each admin
+        for admin_id in admin_ids:
+            try:
+                await bot.send_message(
+                    chat_id=admin_id,
+                    text=message,
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
+                logger.info(f"📨 Sent registration request to admin {admin_id}")
+            except Exception as e:
+                logger.warning(f"Could not send to admin {admin_id}: {e}")
+                
+    except Exception as e:
+        logger.error(f"Error notifying admins: {e}")
+
+async def handle_registration_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle approve/reject callbacks for registration requests"""
+    query = update.callback_query
+    await query.answer()
+    
+    try:
+        # Parse callback data: reg_approve:request_id or reg_reject:request_id
+        action, request_id = query.data.split(':', 1)
+        
+        # Load pending registrations
+        pending = load_pending_registrations()
+        
+        # Find the request
+        request = None
+        for req in pending.get('requests', []):
+            if req['request_id'] == request_id:
+                request = req
+                break
+        
+        if not request:
+            await query.edit_message_text("❌ Request not found or already processed.")
+            return
+        
+        if request.get('status') != 'pending':
+            await query.edit_message_text(f"ℹ️ This request was already {request['status']}.")
+            return
+        
+        user_id = request['user_id']
+        house_number = request['house_number']
+        group_id = request['group_id']
+        resident_name = request['resident_name']
+        user_first_name = request.get('user_first_name', 'User')
+        
+        if action == 'reg_approve':
+            # Add user to groups.json
+            success = add_user_to_groups_json(user_id, house_number, group_id)
+            
+            if success:
+                # Update request status
+                request['status'] = 'approved'
+                request['approved_by'] = query.from_user.id
+                from datetime import datetime
+                request['approved_at'] = datetime.now().isoformat()
+                save_pending_registrations_file(pending)
+                
+                # Update message
+                await query.edit_message_text(
+                    f"✅ **Approved!**\\n\\n"
+                    f"User {user_first_name} has been registered to house {house_number}.\\n"
+                    f"They can now access the webapp.",
+                    parse_mode='Markdown'
+                )
+                
+                # Optionally notify the user
+                try:
+                    await context.bot.send_message(
+                        chat_id=user_id,
+                        text=f"✅ Your registration request has been approved!\\n\\n"
+                             f"You are now registered to house {house_number}.\\n"
+                             f"You can now use the mini app to submit payments and view your payment history.",
+                        parse_mode='Markdown'
+                    )
+                except:
+                    pass  # User might not have started the bot
+                
+            else:
+                await query.edit_message_text("❌ Failed to add user to groups.json. Check logs.")
+        
+        elif action == 'reg_reject':
+            # Update request status
+            request['status'] = 'rejected'
+            request['rejected_by'] = query.from_user.id
+            from datetime import datetime
+            request['rejected_at'] = datetime.now().isoformat()
+            save_pending_registrations_file(pending)
+            
+            # Update message
+            await query.edit_message_text(
+                f"❌ **Rejected**\\n\\n"
+                f"Registration request from {user_first_name} for house {house_number} was rejected.",
+                parse_mode='Markdown'
+            )
+            
+            # Optionally notify the user
+            try:
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=f"❌ Your registration request was not approved.\\n\\n"
+                         f"Please contact an admin if you believe this was a mistake.",
+                    parse_mode='Markdown'
+                )
+            except:
+                pass  # User might not have started the bot
+        
+    except Exception as e:
+        logger.error(f"Error handling registration callback: {e}")
+        await query.edit_message_text(f"❌ Error: {str(e)}")
+
+
 # ========== START ==========
 def main():
     logger.info("=" * 60)
@@ -4950,12 +5182,22 @@ def main():
         CallbackQueryHandler(handle_admin_callbacks, pattern="^role_"))
     application.add_handler(
         CallbackQueryHandler(handle_admin_callbacks, pattern="^back_to_start$"))
+    # Registration approval callbacks
+    application.add_handler(
+        CallbackQueryHandler(handle_registration_callbacks, pattern="^reg_(approve|reject):"))
 
     # Add message handler (for all non-command messages)
     application.add_handler(
         MessageHandler((filters.TEXT | filters.CAPTION | filters.PHOTO)
                        & ~filters.COMMAND, handle_message))
 
+    # Setup job queue for periodic tasks
+    job_queue = application.job_queue
+    if job_queue:
+        # Check for pending registrations every 30 seconds
+        job_queue.run_repeating(check_pending_registrations, interval=30, first=10)
+        logger.info("✅ Registration approval system enabled (checking every 30s)")
+    
     logger.info("✅ Ready!")
     # Log admin counts per group
     for chat_id, config in GROUP_CONFIGS.items():

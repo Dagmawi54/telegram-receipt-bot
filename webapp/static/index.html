@@ -46,6 +46,74 @@
             </div>
         </div>
 
+        <!-- Registration Screen (New Users) -->
+        <div id="registration-screen" class="container view-animate" style="display: none;">
+            <div style="text-align: center; margin: 20px 0 30px;">
+                <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), #2563eb); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                    <i data-feather="user-plus" style="width: 40px; height: 40px; color: white;"></i>
+                </div>
+                <h1 style="font-size: 26px; margin-bottom: 8px;">👋 Welcome!</h1>
+                <p class="text-muted">Let's get you registered</p>
+            </div>
+
+            <div class="card" style="margin-bottom: 24px; background: var(--info-soft); border-left: 4px solid var(--primary);">
+                <p style="margin: 0; color: var(--text-primary); font-size: 14px;">
+                    <strong>📝 Important:</strong> Enter <strong>ONLY your house number</strong> (e.g., <code style="background: var(--bg-surface); padding: 2px 8px; border-radius: 4px; color: var(--primary);">407</code>)
+                </p>
+                <p style="margin: 8px 0 0; color: var(--text-secondary); font-size: 13px;">
+                    ❌ <strong>NOT:</strong> "Block 22, House 407" or "Bldg 407"
+                </p>
+            </div>
+
+            <form id="registration-form">
+                <div class="card" style="margin-bottom: 16px;">
+                    <label class="text-sm text-muted" style="display: block; margin-bottom: 8px;">
+                        <span data-i18n="houseNumber">House Number</span> *
+                    </label>
+                    <div class="search-bar">
+                        <i data-feather="home"></i>
+                        <input type="text" id="reg-house" class="form-input" placeholder="e.g., 407" maxlength="4" pattern="[0-9]{3,4}" required>
+                    </div>
+                    <p class="text-sm text-muted" style="margin-top: 4px;">Just the number, no text</p>
+                </div>
+
+                <div class="card" style="margin-bottom: 20px;">
+                    <label class="text-sm text-muted" style="display: block; margin-bottom: 8px;">
+                        <span data-i18n="yourName">Your Full Name</span> *
+                    </label>
+                    <div class="search-bar">
+                        <i data-feather="user"></i>
+                        <input type="text" id="reg-name" class="form-input" placeholder="Enter your name" required>
+                    </div>
+                </div>
+
+                <div id="reg-error" style="display: none; background: var(--danger-soft); color: var(--danger); padding: 16px; border-radius: var(--radius-md); margin-bottom: 16px; border-left: 4px solid var(--danger);">
+                   <!-- Error message here -->
+                </div>
+
+                <div id="reg-pending" style="display: none; background: var(--warning-soft); color: var(--warning); padding: 16px; border-radius: var(--radius-md); margin-bottom: 16px; border-left: 4px solid var(--warning);">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i data-feather="clock" style="width: 18px; height: 18px;"></i>
+                        <div>
+                            <strong>Request Pending</strong>
+                            <p style="margin: 4px 0 0; font-size: 13px;">Your registration is waiting for admin approval. You'll get access once approved!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" id="btn-register" class="role-card" style="width: 100%; justify-content: center; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border: none; color: white;">
+                    <i data-feather="send" style="width: 20px; color: white;"></i>
+                    <span style="font-weight: 600;">Submit Request</span>
+                </button>
+
+                <button type="button" onclick="showWelcome()" class="role-card" style="width: 100%; justify-content: center; margin-top: 12px; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
+                    <i data-feather="arrow-left" style="width: 18px;"></i>
+                    <span>Back</span>
+                </button>
+            </form>
+        </div>
+
+
         <!-- Admin Panel -->
         <div id="admin-panel" style="display: none;">
             <header class="app-header">

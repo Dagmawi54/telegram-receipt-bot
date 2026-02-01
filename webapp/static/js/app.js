@@ -292,21 +292,9 @@ function updateWelcomeScreen() {
 
     feather.replace();
 
-    // Show message if user is not registered
+    // Show registration screen if user is not registered
     if (!currentUser.is_admin && userHouses.length === 0) {
-        grid.innerHTML = `
-            <div class="card" style="text-align: center; padding: 32px 24px;">
-                <i data-feather="alert-circle" style="width: 48px; height: 48px; color: var(--warning); margin-bottom: 16px;"></i>
-                <h3 style="margin-bottom: 8px;">Not Registered</h3>
-                <p class="text-muted" style="margin-bottom: 16px;">
-                    You are not registered in the system. Please contact an administrator to register your house number.
-                </p>
-                <p class="text-muted text-sm">
-                    Once registered, you'll be able to submit payments and view your payment history.
-                </p>
-            </div>
-        `;
-        feather.replace();
+        showRegistrationScreen();
         return;
     }
 
@@ -324,6 +312,7 @@ function showWelcome() {
 
 function hideAllViews() {
     document.getElementById('welcome-screen').style.display = 'none';
+    document.getElementById('registration-screen').style.display = 'none';
     document.getElementById('admin-panel').style.display = 'none';
     document.getElementById('user-panel').style.display = 'none';
     document.getElementById('detail-view').style.display = 'none';
@@ -490,7 +479,7 @@ async function showUserPanel(groupId) {
 
             // Render payment history
             renderUserPaymentHistory(h.payments);
-            
+
             // Check for last submission (edit mode)
             checkLastSubmission(groupId);
 
@@ -505,7 +494,7 @@ async function checkLastSubmission(groupId) {
             headers: { 'X-Telegram-Init-Data': tg?.initData || '' }
         });
         const data = await res.json();
-        
+
         const editBtn = document.getElementById('btn-edit-last');
         if (editBtn) {
             if (data.has_submission) {
@@ -525,33 +514,33 @@ async function editLastPayment() {
             headers: { 'X-Telegram-Init-Data': tg?.initData || '' }
         });
         const data = await res.json();
-        
+
         if (!data.has_submission) {
             showToast('No previous submission found', 'error');
             return;
         }
-        
+
         // Enable edit mode
         window.isEditMode = true;
-        
+
         // Show payment view
         showPaymentView();
-        
+
         // Pre-fill form with last submission data
         const submission = data.submission;
         document.getElementById('input-house').value = submission.house_number;
         document.getElementById('input-type').value = submission.payment_type;
         document.getElementById('input-month').value = submission.month;
-        
+
         // Show edit mode indicator
         const editIndicator = document.getElementById('edit-mode-indicator');
         if (editIndicator) {
             editIndicator.style.display = 'block';
         }
-        
+
         // Lookup house
         lookupHouse();
-        
+
         showToast('Edit mode enabled. You can modify your last payment.', 'warning');
     } catch (e) {
         console.error('Error loading last submission:', e);
@@ -741,21 +730,21 @@ function showTypeHouses(type) {
 function showToast(message, type = 'success', duration = 3000) {
     const container = document.getElementById('toast-container');
     if (!container) return;
-    
+
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    
+
     const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'alert-circle' : 'info';
     toast.innerHTML = `
         <i data-feather="${icon}" style="width: 20px; height: 20px;"></i>
         <span>${message}</span>
     `;
-    
+
     container.appendChild(toast);
     feather.replace();
-    
+
     setTimeout(() => toast.classList.add('show'), 10);
-    
+
     setTimeout(() => {
         toast.classList.remove('show');
         setTimeout(() => toast.remove(), 300);
@@ -788,7 +777,7 @@ function handleDrop(e) {
     if (uploadArea) {
         uploadArea.classList.remove('dragover');
     }
-    
+
     const files = e.dataTransfer.files;
     if (files.length > 0) {
         const file = files[0];
@@ -808,7 +797,7 @@ function handleDrop(e) {
 function setLoading(elementId, isLoading) {
     const element = document.getElementById(elementId);
     if (!element) return;
-    
+
     if (isLoading) {
         element.disabled = true;
         element.style.opacity = '0.6';
@@ -904,7 +893,7 @@ function resetPaymentForm() {
     currentReceiptId = null;
     window.extractedReceiptData = {};
     window.isEditMode = false;
-    
+
     const receiptImage = document.getElementById('receipt-image');
     const receiptPreview = document.getElementById('receipt-preview');
     const uploadArea = document.getElementById('upload-area');
@@ -918,7 +907,7 @@ function resetPaymentForm() {
     const successEl = document.getElementById('form-success');
     const editIndicator = document.getElementById('edit-mode-indicator');
     const beneficiaryEl = document.getElementById('extracted-beneficiary');
-    
+
     if (receiptImage) receiptImage.src = '';
     if (receiptPreview) receiptPreview.style.display = 'none';
     if (uploadArea) {
@@ -938,7 +927,7 @@ function resetPaymentForm() {
     if (successEl) successEl.style.display = 'none';
     if (editIndicator) editIndicator.style.display = 'none';
     if (beneficiaryEl) beneficiaryEl.innerHTML = '';
-    
+
     hideProgress();
 }
 
@@ -971,13 +960,13 @@ async function loadPaymentFormData() {
 function handleReceiptUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
-    
+
     // Validate file type
     if (!file.type.startsWith('image/')) {
         showToast('Please upload an image file', 'error');
         return;
     }
-    
+
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
         showToast('Image size should be less than 10MB', 'error');
@@ -991,34 +980,34 @@ function handleReceiptUpload(event) {
         const previewContainer = document.getElementById('receipt-preview');
         const uploadArea = document.getElementById('upload-area');
         const continueBtn = document.getElementById('btn-continue-step1');
-        
+
         if (preview) {
             preview.src = currentReceiptData;
-            preview.onload = function() {
+            preview.onload = function () {
                 previewContainer.style.display = 'block';
                 previewContainer.style.animation = 'fadeInUp var(--transition-base)';
             };
         }
-        
+
         // Hide upload area after image is selected
         if (uploadArea) {
             uploadArea.style.display = 'none';
         }
-        
+
         // Enable Continue button
         if (continueBtn) {
             continueBtn.style.opacity = '1';
             continueBtn.style.pointerEvents = 'auto';
             continueBtn.style.cursor = 'pointer';
         }
-        
+
         showToast('Receipt image loaded successfully', 'success', 2000);
     };
-    
-    reader.onerror = function() {
+
+    reader.onerror = function () {
         showToast('Error reading file', 'error');
     };
-    
+
     reader.readAsDataURL(file);
 }
 
@@ -1054,14 +1043,14 @@ async function processReceipt() {
             const amountEl = document.getElementById('extracted-amount');
             const txidEl = document.getElementById('extracted-txid');
             const beneficiaryEl = document.getElementById('extracted-beneficiary');
-            
+
             if (amountEl) {
                 amountEl.textContent = extracted.amount ? formatCurrency(parseFloat(extracted.amount)) : 'Not detected';
                 if (!extracted.amount) {
                     amountEl.style.color = 'var(--warning)';
                 }
             }
-            
+
             if (txidEl) {
                 if (extracted.transaction_id) {
                     txidEl.innerHTML = `
@@ -1082,7 +1071,7 @@ async function processReceipt() {
                 }
                 feather.replace();
             }
-            
+
             // Show beneficiary validation
             if (beneficiaryEl) {
                 if (extracted.beneficiary) {
@@ -1116,7 +1105,7 @@ async function processReceipt() {
                 beneficiary_valid: extracted.beneficiary_valid || false,
                 beneficiary_normalized: extracted.beneficiary_normalized || ''
             };
-            
+
             // Pre-fill form if data available
             if (extracted.amount) {
                 showToast('Receipt processed successfully', 'success');
@@ -1218,15 +1207,15 @@ async function submitPayment() {
     } else if (!/^\d{3,4}$/.test(houseNumber)) {
         errors.push('House number must be 3-4 digits');
     }
-    
+
     if (!paymentType) {
         errors.push(t('paymentTypeRequired'));
     }
-    
+
     if (!month) {
         errors.push(t('monthRequired'));
     }
-    
+
     // Transaction ID is optional - show warning if missing but allow submission
     const extracted = window.extractedReceiptData || {};
     if (!extracted.transaction_id || extracted.transaction_id === 'N/A') {
@@ -1254,10 +1243,10 @@ async function submitPayment() {
     try {
         const extracted = window.extractedReceiptData || {};
         // Use empty string instead of 'N/A' for missing TXID
-        const txid = extracted.transaction_id && extracted.transaction_id !== 'N/A' 
-            ? extracted.transaction_id 
+        const txid = extracted.transaction_id && extracted.transaction_id !== 'N/A'
+            ? extracted.transaction_id
             : '';
-        
+
         const payload = {
             house_number: houseNumber,
             payment_type: paymentType,
@@ -1290,17 +1279,17 @@ async function submitPayment() {
             if (successMsg) {
                 successMsg.textContent = `House ${houseNumber} - ${paymentType} - ${month}`;
             }
-            
+
             // Clear edit mode
             window.isEditMode = false;
-            
+
             showToast('Payment submitted successfully!', 'success');
-            
+
             // Refresh last submission check
             if (currentGroupId) {
                 checkLastSubmission(currentGroupId);
             }
-            
+
             setTimeout(() => {
                 hideProgress();
                 goToPaymentStep('success');
@@ -1330,3 +1319,137 @@ async function submitPayment() {
         setLoading('btn-submit-payment', false);
     }
 }
+
+// ========== USER REGISTRATION ==========
+
+function showRegistrationScreen() {
+    hideAllViews();
+    document.getElementById('registration-screen').style.display = 'block';
+
+    // Check if already has pending request
+    checkPendingRegistration();
+
+    // Setup form handler
+    const form = document.getElementById('registration-form');
+    if (form) {
+        form.onsubmit = handleRegistrationSubmit;
+    }
+
+    feather.replace();
+}
+
+async function checkPendingRegistration() {
+    try {
+        const res = await fetch(`${API_BASE}/api/check-registration-status`, {
+            headers: { 'X-Telegram-Init-Data': tg?.initData || '' }
+        });
+        const data = await res.json();
+
+        if (data.has_pending) {
+            const pendingEl = document.getElementById('reg-pending');
+            if (pendingEl) {
+                pendingEl.style.display = 'block';
+            }
+            // Disable submit button
+            const btn = document.getElementById('btn-register');
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.pointerEvents = 'none';
+            }
+        }
+    } catch (e) {
+        console.error('Error checking pending:', e);
+    }
+}
+
+async function handleRegistrationSubmit(e) {
+    e.preventDefault();
+
+    const houseNumber = document.getElementById('reg-house').value.trim();
+    const residentName = document.getElementById('reg-name').value.trim();
+    const errorEl = document.getElementById('reg-error');
+    const btn = document.getElementById('btn-register');
+
+    // Clear previous errors
+    if (errorEl) errorEl.style.display = 'none';
+
+    // Validate
+    if (!houseNumber || !residentName) {
+        if (errorEl) {
+            errorEl.textContent = 'Please fill in all fields';
+            errorEl.style.display = 'block';
+        }
+        return;
+    }
+
+    // Validate house number is numeric
+    if (!/^\d{3,4}$/.test(houseNumber)) {
+        if (errorEl) {
+            errorEl.innerHTML = `
+                <strong>Invalid house number</strong><br>
+                Please enter only the house number (e.g., 407)<br>
+                <span style="font-size: 13px;">❌ Do NOT include "Block 22" or any text</span>
+            `;
+            errorEl.style.display = 'block';
+        }
+        return;
+    }
+
+    // Get group ID (use first admin group or default)
+    const groupId = currentUser.admin_groups?.[0]?.id || Object.keys(currentUser.groups || {})[0] || -1003290908954;
+
+    try {
+        setLoading('btn-register', true);
+
+        const res = await fetch(`${API_BASE}/api/request-access/${groupId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': tg?.initData || ''
+            },
+            body: JSON.stringify({
+                house_number: houseNumber,
+                resident_name: residentName
+            })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            // Show success message
+            const pendingEl = document.getElementById('reg-pending');
+            if (pendingEl) {
+                pendingEl.style.display = 'block';
+            }
+
+            // Disable form
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.pointerEvents = 'none';
+            document.getElementById('reg-house').disabled = true;
+            document.getElementById('reg-name').disabled = true;
+
+            showToast('Registration request submitted successfully!', 'success');
+
+        } else {
+            // Show error
+            if (errorEl) {
+                errorEl.textContent = data.error || 'Failed to submit request';
+                errorEl.style.display = 'block';
+            }
+            showToast(data.error || 'Failed to submit request', 'error');
+        }
+
+    } catch (e) {
+        console.error(e);
+        if (errorEl) {
+            errorEl.textContent = 'Network error. Please try again.';
+            errorEl.style.display = 'block';
+        }
+        showToast('Network error. Please try again.', 'error');
+    } finally {
+        setLoading('btn-register', false);
+    }
+}
+

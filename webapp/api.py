@@ -1427,6 +1427,122 @@ def get_last_submission(group_id):
     })
 
 
+# ========== USER REGISTRATION ENDPOINTS ==========
+
+# Pending registrations storage
+PENDING_REGISTRATIONS_FILE = os.getenv('PENDING_REGISTRATIONS_FILE', '../pending_registrations.json')
+if not os.path.exists(PENDING_REGISTRATIONS_FILE):
+    PENDING_REGISTRATIONS_FILE = 'pending_registrations.json'
+
+def load_pending_registrations():
+    """Load pending registration requests"""
+    try:
+        if os.path.exists(PENDING_REGISTRATIONS_FILE):
+            with open(PENDING_REGISTRATIONS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {'requests': []}
+    except:
+        return {'requests': []}
+
+def save_pending_registrations(data):
+    """Save pending registration requests"""
+    try:
+        with open(PENDING_REGISTRATIONS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        print(f"Error saving pending registrations: {e}")
+        return False
+
+
+@app.route('/api/request-access/<signed:group_id>', methods=['POST'])
+@require_auth
+def request_access(group_id):
+    """Submit access request for new users"""
+    try:
+        user_id = request.telegram_user.get('id')
+        user_first_name = request.telegram_user.get('first_name', '')
+        user_username = request.telegram_user.get('username', '')
+        
+        data = request.get_json()
+        house_number = data.get('house_number', '').strip()
+        resident_name = data.get('resident_name', '').strip()
+        
+        # Validate inputs
+        if not house_number or not resident_name:
+            return jsonify({'error': 'House number and name are required'}), 400
+        
+        # Check if house exists in houses.json
+        houses = load_houses(group_id)
+        if house_number not in houses:
+            return jsonify({
+                'error': f'House number "{house_number}" not found. Please double-check and enter only the house number (e.g., 407, not Block 22).'
+            }), 404
+        
+        # Check if already registered
+        if group_id in GROUP_CONFIGS:
+            user_houses =GROUP_CONFIGS[group_id].get('user_houses', {})
+            if str(user_id) in user_houses:
+                return jsonify({'error': 'You are already registered'}), 400
+        
+        # Load pending requests
+        pending = load_pending_registrations()
+        
+        # Check if already has pending request
+        for req in pending['requests']:
+            if req['user_id'] == user_id and req['group_id'] == group_id and req['status'] == 'pending':
+                return jsonify({
+                    'error': 'You already have a pending registration. Please wait for admin approval.'
+                }), 400
+        
+        # Create new request
+        request_id = str(uuid.uuid4())
+        new_request = {
+            'request_id': request_id,
+            'user_id': user_id,
+            'user_first_name': user_first_name,
+            'user_username': user_username,
+            'resident_name': resident_name,
+            'house_number': house_number,
+            'group_id': group_id,
+            'timestamp': datetime.now().isoformat(),
+            'status': 'pending'
+        }
+        
+        pending['requests'].append(new_request)
+        save_pending_registrations(pending)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Registration request submitted! An admin will review your request shortly.',
+            'request_id': request_id
+        })
+        
+    except Exception as e:
+        print(f"Registration request error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/check-registration-status', methods=['GET'])
+@require_auth
+def check_registration_status():
+    """Check if user has pending registration"""
+    user_id = request.telegram_user.get('id')
+    
+    pending = load_pending_registrations()
+    
+    for req in pending['requests']:
+        if req['user_id'] == user_id and req['status'] == 'pending':
+            return jsonify({
+                'has_pending': True,
+                'house_number': req['house_number'],
+                'timestamp': req['timestamp']
+            })
+    
+    return jsonify({'has_pending': False})
+
+
+
 if __name__ == '__main__':
     # Get port from environment (for production) or default to 5000
     port = int(os.getenv('PORT', 5000))
@@ -1437,4 +1553,3 @@ if __name__ == '__main__':
     else:
         # Production mode
         app.run(host='0.0.0.0', port=port, debug=False)
-

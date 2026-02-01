@@ -39,6 +39,7 @@ ENV/
 # Data files
 processed_messages.json
 last_run.json
+pending_registrations.json
 receipts/
 attached_assets/
 
